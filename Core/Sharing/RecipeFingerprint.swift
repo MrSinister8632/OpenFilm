@@ -1,55 +1,28 @@
-import Foundation
 import CryptoKit
+import Foundation
 
-enum RecipeFingerprint {
+/// Generates and verifies recipe fingerprints.
+/// Uses SHA256 of the canonical recipe string; takes the first 8 hex characters.
+/// Format: 4E7A-82F1
+/// Not intended as cryptographic security — used for integrity checking only.
+struct RecipeFingerprint {
 
-    static func generate(
-        for recipe: RecipePayload
-    ) -> String {
+    /// Generates a display fingerprint (e.g. "4E7A-82F1") from a Recipe.
+    static func generate(for recipe: Recipe) -> String {
+        let canonical = recipe.canonicalString
+        guard let data = canonical.data(using: .utf8) else { return "????-????" }
 
-        let canonical = canonicalString(
-            from: recipe
-        )
+        let hash   = SHA256.hash(data: data)
+        let hexFull = hash.compactMap { String(format: "%02X", $0) }.joined()
+        let first8  = String(hexFull.prefix(8))
 
-        let digest = SHA256.hash(
-            data: Data(canonical.utf8)
-        )
-
-        let hex = digest
-            .compactMap {
-                String(format: "%02X", $0)
-            }
-            .joined()
-
-        let short = String(
-            hex.prefix(8)
-        )
-
-        return "\(short.prefix(4))-\(short.suffix(4))"
+        let a = String(first8.prefix(4))
+        let b = String(first8.suffix(4))
+        return "\(a)-\(b)"
     }
 
-    private static func canonicalString(
-        from recipe: RecipePayload
-    ) -> String {
-
-        [
-            "contrast=\(format(recipe.contrast))",
-            "exposure=\(format(recipe.exposure))",
-            "grain=\(format(recipe.grainAmount))",
-            "highlights=\(format(recipe.highlights))",
-            "saturation=\(format(recipe.saturation))",
-            "shadows=\(format(recipe.shadows))",
-            "sharpness=\(format(recipe.sharpness))",
-            "temperature=\(format(recipe.temperature))",
-            "tint=\(format(recipe.tint))",
-            "vignette=\(format(recipe.vignetteAmount))"
-        ]
-        .joined(separator: "|")
-    }
-
-    private static func format(
-        _ value: Double
-    ) -> String {
-        String(format: "%.4f", value)
+    /// Verifies that a stored fingerprint matches a freshly generated one.
+    static func verify(_ fingerprint: String, for recipe: Recipe) -> Bool {
+        generate(for: recipe) == fingerprint
     }
 }

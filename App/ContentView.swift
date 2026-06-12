@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct RootView: View {
+struct ContentView: View {
     var body: some View {
         TabView {
             PhotosTab()
